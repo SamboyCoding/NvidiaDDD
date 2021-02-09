@@ -12,10 +12,8 @@ namespace NvidiaDriverThing
     internal static class GpuUtilities
     {
         [SupportedOSPlatform("windows")]
-        internal static string? GetGpuModel()
+        private static ManagementObject? GetNvidiaGPUUsingWindowsManagement()
         {
-            //This function is currently windows-specific but it shouldn't be hard to make a linux version.
-            Console.WriteLine("Detecting GPU using Win32Management...");
             using var searcher = new ManagementObjectSearcher("select * from Win32_VideoController");
 
             var gpus = searcher.Get().Cast<ManagementObject>().ToList();
@@ -28,15 +26,63 @@ namespace NvidiaDriverThing
                 return null;
             }
 
-            var props = nvidiaGpu.Properties.Cast<PropertyData>().ToDictionary(p => p.Name, p => p.Value);
+            return nvidiaGpu;
+        }
+        
+        [SupportedOSPlatform("windows")]
+        internal static string? GetGpuModel()
+        {
+            //This function is currently windows-specific but it shouldn't be hard to make a linux version.
+            Console.WriteLine("Detecting GPU using Win32Management...");
 
-            var rawName = (string) props["VideoProcessor"];
+            var nvidiaGpu = GetNvidiaGPUUsingWindowsManagement();
+
+            if (nvidiaGpu == null)
+                return null;
+
+            var rawName = (string) nvidiaGpu["VideoProcessor"];
 
             if (rawName.EndsWith("GB"))
                 //Fix for 1060 3GB / 1060 6GB
                 rawName = string.Join(" ", rawName.Split(" ").SkipLast(1));
 
             return rawName;
+        }
+
+        [SupportedOSPlatform("windows")]
+        internal static (string? driverVersion, string? driverDate) GetCurrentGpuDriverVersion()
+        {
+            Console.WriteLine("Getting installed driver version using Win32Management...");
+
+            var nvidiaGpu = GetNvidiaGPUUsingWindowsManagement();
+
+            if (nvidiaGpu == null)
+                return (null, null);
+
+            //Of the form 27.21.14.6079 where the 4.6079 is the interesting bit (driver v460.79)
+            //Also checked against 461.40 which is 27.21.14.6140
+            var rawVersion = (string) nvidiaGpu["DriverVersion"];
+            Console.WriteLine($"Currently installed driver reports itself as version {rawVersion}");
+            
+            //Discard the first two dotted sections
+            var split = rawVersion.Split('.');
+            if (split.Length != 4)
+            {
+                Console.WriteLine("Unknown driver version format.");
+                return (null, null);
+            }
+
+            //E.g. 46079
+            var driverVersionNoDot = split[2].Substring(1) + split[3];
+            var driverVersion = driverVersionNoDot.Substring(0, 3) + "." + driverVersionNoDot.Substring(3);
+            
+            Console.WriteLine($"Which is the version that NVIDIA call {driverVersion}");
+            
+            var rawDate = (string) nvidiaGpu["DriverDate"]; //e.g 20201203000000.000000-000, which appears to be of format YYYYMMDDHHmmSS.Ticks-offset
+
+            var formattedDate = DateTime.ParseExact(rawDate.Substring(0, 8), "yyyyMMdd", null).ToString("yyyy MMMM dd");
+
+            return (driverVersion, driverDate: formattedDate);
         }
 
         internal static string GetGpuFamilyFromModel(string model)

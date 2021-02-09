@@ -32,9 +32,11 @@ namespace NvidiaDriverThing
                 var familyName = GpuUtilities.GetGpuFamilyFromModel(model); //e.g. GeForce RTX 20 Series
 
                 var drivers = await GpuUtilities.GetMostRecentDrivers(productType, familyName, gpuName, model);
-                
+
                 if(drivers == null)
                     return;
+                
+                var (currentDriverVersion, driverFileDate) = GpuUtilities.GetCurrentGpuDriverVersion();
 
                 //Put most recent last
                 drivers.Reverse();
@@ -46,6 +48,25 @@ namespace NvidiaDriverThing
                 }
                 
                 Console.WriteLine("Most recent driver is at the bottom for your convenience. Enjoy!");
+
+                if (currentDriverVersion == null) 
+                    return;
+
+                var installedDriverInfo = drivers.FirstOrDefault(d => d.Version == currentDriverVersion);
+                var publishedDriverDate = installedDriverInfo?.ReleaseDateTime;  
+                Console.WriteLine($"Latest driver is {drivers.Last().Version}, released on {drivers.Last().ReleaseDateTime}, you are on {currentDriverVersion}, released {(publishedDriverDate != null ? "on " + publishedDriverDate : "a long time ago (self-reports date " + driverFileDate + ", but this may be wrong)")}.");
+
+                if (installedDriverInfo != null && currentDriverVersion != drivers.Last().Version)
+                {
+                    drivers.Reverse();
+                    var versionsBehind = drivers.IndexOf(installedDriverInfo);
+                    Console.WriteLine($"You are {versionsBehind} version{(versionsBehind == 1 ? "" : "s")} out of date.");
+                }
+                else
+                {
+                    Console.WriteLine("You are more than 10 versions out of date.");
+                }
+                
             }
             catch (Exception e)
             {
