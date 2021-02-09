@@ -56,7 +56,11 @@ namespace NvidiaDriverThing
                 var publishedDriverDate = installedDriverInfo?.ReleaseDateTime;  
                 Console.WriteLine($"Latest driver is {drivers.Last().Version}, released on {drivers.Last().ReleaseDateTime}, you are on {currentDriverVersion}, released {(publishedDriverDate != null ? "on " + publishedDriverDate : "a long time ago (self-reports date " + driverFileDate + ", but this may be wrong)")}.");
 
-                if (installedDriverInfo != null && currentDriverVersion != drivers.Last().Version)
+                if (currentDriverVersion == drivers.Last().Version)
+                {
+                    Console.WriteLine("You are up to date.");
+                }
+                else if (installedDriverInfo != null)
                 {
                     drivers.Reverse();
                     var versionsBehind = drivers.IndexOf(installedDriverInfo);
