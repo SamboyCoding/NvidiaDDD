@@ -45,6 +45,8 @@ namespace NvidiaDriverThing
             if (rawName.EndsWith("GB"))
                 //Fix for 1060 3GB / 1060 6GB
                 rawName = string.Join(" ", rawName.Split(" ").SkipLast(1));
+            if (rawName.StartsWith("NVIDIA"))
+                rawName = rawName[rawName.IndexOf(" ", StringComparison.Ordinal)..].Trim();
 
             return rawName;
         }
