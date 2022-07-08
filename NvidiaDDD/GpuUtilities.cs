@@ -94,10 +94,15 @@ namespace NvidiaDriverThing
             
             //Take specifically the second word, because there could be a 'Ti' on the end.
             var modelNumber = model.Split(" ")[1];
+            
             if (model.Contains("RTX"))
             {
                 //All RTX cards are currently 4-digit model numbers, and the first two digits are the series number (20 or 30).
-                var seriesNumber = modelNumber.Substring(0, 2);
+                var seriesNumber = modelNumber[..2];
+
+                if (model.Contains("Laptop GPU"))
+                    return $"GeForce RTX {seriesNumber} Series (Notebooks)";
+                
                 return $"GeForce RTX {seriesNumber} Series";
             }
 
