@@ -9,25 +9,10 @@
         <RootNamespace>NvidiaDriverThing</RootNamespace>
         <Nullable>enable</Nullable>
         <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-        <TrimMode>copyused</TrimMode>
         <Version>1.1.3</Version>
-    </PropertyGroup>
-    
-    <PropertyGroup>
-        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-        <PublishTrimmed>true</PublishTrimmed>
-        <TrimMode>link</TrimMode>
         <PublishSingleFile>true</PublishSingleFile>
-        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+        <PublishTrimmed>true</PublishTrimmed>
     </PropertyGroup>
-
-<!--    <PropertyGroup>-->
-<!--        <RuntimeIdentifier>ubuntu-x64</RuntimeIdentifier>-->
-<!--        <PublishTrimmed>true</PublishTrimmed>-->
-<!--        <TrimMode>link</TrimMode>-->
-<!--        <PublishSingleFile>true</PublishSingleFile>-->
-<!--        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>-->
-<!--    </PropertyGroup>-->
 
     <ItemGroup>
       <PackageReference Include="System.Management" Version="6.0.0" />
