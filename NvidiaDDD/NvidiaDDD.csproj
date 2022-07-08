@@ -2,11 +2,14 @@
 
     <PropertyGroup>
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+        <DebugType>embedded</DebugType>
         <OutputType>Exe</OutputType>
         <TargetFramework>net6.0</TargetFramework>
         <RuntimeIdentifiers>win-x64;ubuntu-x64</RuntimeIdentifiers>
         <RootNamespace>NvidiaDriverThing</RootNamespace>
         <Nullable>enable</Nullable>
+        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+        <TrimMode>copyused</TrimMode>
         <Version>1.1.3</Version>
     </PropertyGroup>
     
@@ -28,6 +31,10 @@
 
     <ItemGroup>
       <PackageReference Include="System.Management" Version="6.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <TrimmerRootAssembly Include="System.Management" />
     </ItemGroup>
 
 </Project>
