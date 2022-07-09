@@ -7,6 +7,11 @@ namespace NvidiaDriverThing
     {
         internal static string GetOsName()
         {
+            if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
+            {
+                return "Windows 11";
+            }
+            
             //This is NOT an exhaustive list, this is just for the versions nvidia supports
             if(OperatingSystem.IsWindowsVersionAtLeast(10))
             {

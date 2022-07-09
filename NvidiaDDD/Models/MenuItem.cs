@@ -14,5 +14,10 @@ namespace NvidiaDriverThing.Models
         [JsonConverter(typeof(StringToIntConverter))]
         public int id { get; set; }
         public string menutext { get; set; }
+
+        public override string ToString()
+        {
+            return $"{id} - {menutext}";
+        }
     }
 }

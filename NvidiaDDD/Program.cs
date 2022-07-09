@@ -33,8 +33,8 @@ namespace NvidiaDriverThing
 
                 var drivers = await GpuUtilities.GetMostRecentDrivers(productType, familyName, gpuName, model);
 
-                if(drivers == null)
-                    return;
+                if (drivers == null || drivers.Count == 0)
+                    goto end;
                 
                 var (currentDriverVersion, driverFileDate) = GpuUtilities.GetCurrentGpuDriverVersion();
 
@@ -77,6 +77,7 @@ namespace NvidiaDriverThing
                 Console.WriteLine(e);
             }
             
+            end:
             Console.WriteLine("\nPress enter to exit...");
             Console.ReadLine();
         }

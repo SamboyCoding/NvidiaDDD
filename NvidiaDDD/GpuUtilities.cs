@@ -18,7 +18,7 @@ namespace NvidiaDriverThing
 
             var gpus = searcher.Get().Cast<ManagementObject>().ToList();
 
-            var nvidiaGpu = gpus.FirstOrDefault(gpu => (string) gpu["AdapterCompatibility"] == "NVIDIA");
+            var nvidiaGpu = gpus.FirstOrDefault(gpu => (string)gpu["AdapterCompatibility"] == "NVIDIA");
 
             if (nvidiaGpu == null)
             {
@@ -28,7 +28,7 @@ namespace NvidiaDriverThing
 
             return nvidiaGpu;
         }
-        
+
         [SupportedOSPlatform("windows")]
         internal static string? GetGpuModel()
         {
@@ -40,7 +40,7 @@ namespace NvidiaDriverThing
             if (nvidiaGpu == null)
                 return null;
 
-            var rawName = (string) nvidiaGpu["VideoProcessor"];
+            var rawName = (string)nvidiaGpu["VideoProcessor"];
 
             if (rawName.EndsWith("GB"))
                 //Fix for 1060 3GB / 1060 6GB
@@ -63,9 +63,9 @@ namespace NvidiaDriverThing
 
             //Of the form 27.21.14.6079 where the 4.6079 is the interesting bit (driver v460.79)
             //Also checked against 461.40 which is 27.21.14.6140
-            var rawVersion = (string) nvidiaGpu["DriverVersion"];
+            var rawVersion = (string)nvidiaGpu["DriverVersion"];
             Console.WriteLine($"Currently installed driver reports itself as version {rawVersion}");
-            
+
             //Discard the first two dotted sections
             var split = rawVersion.Split('.');
             if (split.Length != 4)
@@ -77,10 +77,10 @@ namespace NvidiaDriverThing
             //E.g. 46079
             var driverVersionNoDot = split[2].Substring(1) + split[3];
             var driverVersion = driverVersionNoDot.Substring(0, 3) + "." + driverVersionNoDot.Substring(3);
-            
+
             Console.WriteLine($"Which is the version that NVIDIA call {driverVersion}");
-            
-            var rawDate = (string) nvidiaGpu["DriverDate"]; //e.g 20201203000000.000000-000, which appears to be of format YYYYMMDDHHmmSS.Ticks-offset
+
+            var rawDate = (string)nvidiaGpu["DriverDate"]; //e.g 20201203000000.000000-000, which appears to be of format YYYYMMDDHHmmSS.Ticks-offset
 
             var formattedDate = DateTime.ParseExact(rawDate.Substring(0, 8), "yyyyMMdd", null).ToString("yyyy MMMM dd");
 
@@ -91,10 +91,10 @@ namespace NvidiaDriverThing
         {
             if (!model.Contains("GTX") && !model.Contains("RTX"))
                 throw new NotImplementedException("Family detection for non-GTX, non-RTX cards NYI");
-            
+
             //Take specifically the second word, because there could be a 'Ti' on the end.
             var modelNumber = model.Split(" ")[1];
-            
+
             if (model.Contains("RTX"))
             {
                 //All RTX cards are currently 4-digit model numbers, and the first two digits are the series number (20 or 30).
@@ -102,7 +102,7 @@ namespace NvidiaDriverThing
 
                 if (model.Contains("Laptop GPU"))
                     return $"GeForce RTX {seriesNumber} Series (Notebooks)";
-                
+
                 return $"GeForce RTX {seriesNumber} Series";
             }
 
@@ -115,7 +115,7 @@ namespace NvidiaDriverThing
 
                 return "GeForce 10 Series";
             }
-            
+
             //Older, three-digit model. Series name is hundreds digit + 00
             var threeDigitSeriesNumber = modelNumber[0] + "00";
             if (isMobile)
@@ -124,12 +124,19 @@ namespace NvidiaDriverThing
             return $"GeForce {threeDigitSeriesNumber} Series{(isMobile ? " (Notebooks)" : "")}";
         }
 
+
         internal static async Task<List<DriverInfo>?> GetMostRecentDrivers(string productType, string familyName, string gpuName, string model)
         {
             //Fetch options so we can populate productId
             var menuItems = await NvidiaAPI.GetMenuItems(1, 0);
 
-            var productId = menuItems[0].GetOptionId(productType);
+            var productId = menuItems[MenuItemIds.MenuItemProduct].GetOptionId(productType);
+
+            if (productId == -1)
+            {
+                Console.WriteLine($"Could not find product type {productType} in the menu.");
+                return null;
+            }
 
             if (productId != 1)
             {
@@ -137,17 +144,33 @@ namespace NvidiaDriverThing
                 menuItems = await NvidiaAPI.GetMenuItems(productId, 0);
             }
 
-            var familyId = menuItems[1].GetOptionId(familyName);
+            var familyId = menuItems[MenuItemIds.MenuItemFamily].GetOptionId(familyName);
+
+            if (familyId == -1)
+            {
+                Console.WriteLine($"[Error] Could not find family ID for {familyName}");
+                return null;
+            }
 
             //Fetch with productId and familyId so we can populate the rest of the options
             menuItems = await NvidiaAPI.GetMenuItems(productId, familyId);
 
             //Find GPU Id
             Console.WriteLine($"Looking for GPU {gpuName} in list of gpus...");
-            var gpuId = menuItems[2].GetOptionId(gpuName);
+            var gpuId = menuItems[MenuItemIds.MenuItemGpu].GetOptionId(gpuName);
+
+            if (gpuId == -1)
+            {
+                Console.WriteLine($"[Error] Could not find GPU ID for {gpuName}");
+                return null;
+            }
 
             //Find OS Id
             var osName = OsDetection.GetOsName();
+
+            //From nvidia website js:
+            // // Default DCH to "1" if OS=Win10-64bit and Geforce or Titan
+            var useDch = productType is "GeForce" or "TITAN" && osName.StartsWith("Windows 1");
 
             if (osName == "unsupported")
             {
@@ -155,12 +178,9 @@ namespace NvidiaDriverThing
                 return null;
             }
 
-            int osId;
-            try
-            {
-                osId = menuItems[4].GetOptionId(osName);
-            }
-            catch (Exception)
+            var osId = menuItems[MenuItemIds.MenuItemOperatingSystem].GetOptionId(osName);
+        
+            if(osId == -1)
             {
                 Console.WriteLine("NVIDIA does not provide drivers for this GPU and OS version.");
                 return null;
@@ -171,22 +191,25 @@ namespace NvidiaDriverThing
                 .Replace("United Kingdom", "UK")
                 .Replace("United States", "US");
 
-            int langId;
-            try
-            {
-                langId = menuItems[5].GetOptionId(langName);
-            }
-            catch (Exception)
+            var langId = menuItems[MenuItemIds.MenuItemLanguage].GetOptionId(langName);
+
+            if (langId == -1)
             {
                 Console.WriteLine($"[Warning] Language is not supported with English Name, trying native name {CultureInfo.InstalledUICulture.NativeName}...");
-                try
+                var nativeName = CultureInfo.InstalledUICulture.NativeName;
+                langId = menuItems[MenuItemIds.MenuItemLanguage].GetOptionId(nativeName);
+
+                if (langId == -1 && nativeName.Contains('('))
                 {
-                    langId = menuItems[5].GetOptionId(CultureInfo.InstalledUICulture.NativeName);
+                    nativeName = nativeName[..nativeName.IndexOf(" (", StringComparison.Ordinal)];
+                    Console.WriteLine($"Trying native name without parenthesis ({nativeName})...");
+                    langId = menuItems[MenuItemIds.MenuItemLanguage].GetOptionId(nativeName);
                 }
-                catch (Exception)
+
+                if (langId == -1)
                 {
-                    Console.WriteLine("[Warning] Language is not supported with native name either, falling back to 'Other'...");
-                    langId = menuItems[5].GetOptionId("Other");
+                    Console.WriteLine("[Warning] Language is not supported with native name either, falling back to 'English (US)'...");
+                    langId = menuItems[MenuItemIds.MenuItemLanguage].GetOptionId("English (US)");
                 }
             }
 
@@ -206,7 +229,7 @@ namespace NvidiaDriverThing
             Console.WriteLine($"\t-languageId: {langId}");
 
             //Get drivers with the four IDs we have.
-            return await NvidiaAPI.GetDrivers(familyId, gpuId, osId, langId);
+            return await NvidiaAPI.GetDrivers(familyId, gpuId, osId, langId, useDch);
         }
     }
 }

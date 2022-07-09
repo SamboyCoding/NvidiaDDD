@@ -9,7 +9,7 @@
         <RootNamespace>NvidiaDriverThing</RootNamespace>
         <Nullable>enable</Nullable>
         <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-        <Version>1.1.3</Version>
+        <Version>1.1.4</Version>
         <PublishSingleFile>true</PublishSingleFile>
         <PublishTrimmed>true</PublishTrimmed>
     </PropertyGroup>
